@@ -1,0 +1,21 @@
+.message .message-icon-bin > StDrawingArea {
+    width: 32px;
+    height: 32px;
+    -st-icon-style: symbolic;
+}
+
+.window-picker #dynamic-calendar-icon.icon-dropshadow {
+    background-image: url('img/calendar-shadow-64.png');
+}
+
+.window-picker #dynamic-clocks-icon.icon-dropshadow {
+    background-image: url('img/clocks-shadow-64.png');
+}
+
+.apps-menu #dynamic-calendar-icon.icon-dropshadow {
+    background-image: url('img/calendar-shadow-32.png');
+}
+
+.apps-menu #dynamic-clocks-icon.icon-dropshadow {
+    background-image: url('img/clocks-shadow-32.png');
+}
