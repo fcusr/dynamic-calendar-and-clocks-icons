@@ -2,7 +2,7 @@
     "uuid": "dynamic-calendar-and-clocks-icons@fcusr.github.com",
     "name": "Dynamic Calendar and Clocks Icons",
     "description": "Let Calendar and Clocks icons show current date and time.",
-    "version": 1,
+    "version": 2,
     "shell-version": ["43"],
     "url": "https://github.com/fcusr/dynamic-calendar-and-clocks-icons"
 }

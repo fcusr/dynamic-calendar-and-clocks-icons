@@ -9,9 +9,6 @@ const St = imports.gi.St;
 
 const CALENDAR_FILE = 'org.gnome.Calendar.desktop';
 const CLOCKS_FILE = 'org.gnome.clocks.desktop';
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-               'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 let calendar, symbolicCalendar, clocks, symbolicClocks;
 let hour, symbolicHour, minute, symbolicMinute, second;
@@ -33,15 +30,46 @@ function createSurface(file) {
     return Cairo.ImageSurface.createFromPNG(path + file);
 }
 
+let settings, connects = [];
+let enableCalendar, showWeekday, showMonth, enableClocks, showSeconds;
+
+function loadSettings() {
+    settings = ExtensionUtils.getSettings
+    ('org.gnome.shell.extensions.dynamic-calendar-and-clocks-icons');
+    enableCalendar = settings.get_boolean('calendar');
+    showWeekday = settings.get_boolean('show-weekday');
+    showMonth = settings.get_boolean('show-month');
+    enableClocks = settings.get_boolean('clocks');
+    showSeconds = settings.get_boolean('show-seconds');
+    connects.push(settings.connect('changed::calendar', () => {
+        enableCalendar = settings.get_boolean('calendar');
+        redisplayIcons();
+    }));
+    connects.push(settings.connect('changed::show-weekday', () => {
+        showWeekday = settings.get_boolean('show-weekday');
+    }));
+    connects.push(settings.connect('changed::show-month', () => {
+        showMonth = settings.get_boolean('show-month');
+    }));
+    connects.push(settings.connect('changed::clocks', () => {
+        enableClocks = settings.get_boolean('clocks');
+        redisplayIcons();
+    }));
+    connects.push(settings.connect('changed::show-seconds', () => {
+        showSeconds = settings.get_boolean('show-seconds');
+    }));
+}
+
 let originalInit;
 
 function initProviderInfo(provider) {
     originalInit.call(this, provider);
+    let providerId = provider.appInfo.get_id();
     let icon = null;
     let iconSize = this.PROVIDER_ICON_SIZE;
-    if(provider.appInfo.get_id() == CALENDAR_FILE) {
+    if(enableCalendar && providerId == CALENDAR_FILE) {
         icon = newIcon(iconSize, 'calendar', repaintCalendar); 
-    } else if(provider.appInfo.get_id() == CLOCKS_FILE) {
+    } else if(enableClocks && providerId == CLOCKS_FILE) {
         icon = newIcon(iconSize, 'clocks', repaintClocks);
     }
     if(icon != null) {
@@ -53,10 +81,10 @@ function initProviderInfo(provider) {
 let originalCreate;
 
 function createIconTexture(iconSize) {
-    if(this.get_id() == CALENDAR_FILE) {
+    if(enableCalendar && this.get_id() == CALENDAR_FILE) {
         return newIcon(iconSize, 'calendar', repaintCalendar);
     }
-    if(this.get_id() == CLOCKS_FILE) {
+    if(enableClocks && this.get_id() == CLOCKS_FILE) {
         return newIcon(iconSize, 'clocks', repaintClocks);
     }
     return originalCreate.call(this, iconSize);
@@ -70,6 +98,7 @@ function newIcon(iconSize, name, repaintFunc) {
         icon.queue_repaint();
         return true;
     });
+    icon.requestedIconSize = iconSize;
     icon.set_size(iconSize, iconSize);
     icon.set_name('dynamic-' + name + '-icon');
     let connect = icon.connect('repaint', repaintFunc);
@@ -84,8 +113,8 @@ function repaintCalendar(icon) {
         return;
     }
     let now = new Date();
-    let day = DAYS[now.getDay()];
-    let month = MONTHS[now.getMonth()];
+    let day = now.toLocaleString('default', {weekday: 'short'});
+    let month = now.toLocaleString('default', {month: 'short'});
     let date = now.getDate().toString();
     let context = icon.get_context();
     let iconSize = getIconSize(icon, context);
@@ -95,13 +124,19 @@ function repaintCalendar(icon) {
     context.paint();
     scaleFactor = 1 / scaleFactor;
     context.scale(scaleFactor, scaleFactor);
-    context.selectFontFace('Cantarell', 0, 1);
+    context.selectFontFace('sans-serif', 0, 1);
     context.setFontSize(iconSize / 96 * 14);
     context.setSourceRGB(0.965, 0.961, 0.957);
-    let text = day + ' ' + month;
+    let text;
+    if(showWeekday) {
+        text = showMonth ? day + ' ' + month : day;
+    } else {
+        text = showMonth ? month : '';
+    }
     let textX = (iconSize - context.textExtents(text).width) / 2;
     context.moveTo(textX, iconSize / 96 * 25);
     context.showText(text);
+    context.selectFontFace('Cantarell', 0, 1);
     context.setFontSize(iconSize / 96 * 28);
     context.setSourceRGB(0.929, 0.2, 0.231);
     let dateX = (iconSize - context.textExtents(date).width) / 2;
@@ -156,11 +191,13 @@ function repaintClocks(icon) {
     context.translate(-256, -252);
     context.setSourceSurface(minute, 0, 0);
     context.paint();
-    context.translate(256, 252);
-    context.rotate(seconds * 6 * Math.PI / 180 - minuteAngle);
-    context.translate(-256, -252);
-    context.setSourceSurface(second, 0, 0);
-    context.paint();
+    if(showSeconds) {
+        context.translate(256, 252);
+        context.rotate(seconds * 6 * Math.PI / 180 - minuteAngle);
+        context.translate(-256, -252);
+        context.setSourceSurface(second, 0, 0);
+        context.paint();
+    }
     context.$dispose();
 }
 
@@ -191,9 +228,12 @@ function repaintSymbolicClocks(icon) {
 function getIconSize(icon, context) {
     let width = icon.get_width();
     let height = icon.get_height();
-    let min = Math.min(width, height);
-    context.translate((width - min) / 2, (height - min) / 2);
-    return min;
+    let size = icon.requestedIconSize;
+    if(size == -1) {
+        size = Math.min(width, height);
+    }
+    context.translate((width - size) / 2, (height - size) / 2);
+    return size;
 }
 
 function redisplayIcons() {
@@ -202,10 +242,19 @@ function redisplayIcons() {
     let apps = appDisplay._orderedItems.slice();
     apps.forEach(icon => {
         if(icon._id == CALENDAR_FILE || icon._id == CLOCKS_FILE) {
-            appDisplay._removeItem(icon);
+            icon.icon.update();
         }
     });
-    appDisplay._redisplay();
+    let folderIcons = appDisplay._folderIcons;
+    folderIcons.forEach(folderIcon => {
+        let appsInFolder = folderIcon.view._orderedItems.slice();
+        appsInFolder.forEach(icon => {
+            if(icon._id == CALENDAR_FILE || icon._id == CLOCKS_FILE) {
+                icon.icon.update();
+            }
+        });
+        folderIcon.icon.update();
+    });
     let dash = controls.dash;
     let children = dash._box.get_children().filter(actor => {
         return actor.child
@@ -214,10 +263,9 @@ function redisplayIcons() {
     children.forEach(actor => {
         let actorId = actor.child._delegate.app.get_id();
         if(actorId == CALENDAR_FILE || actorId == CLOCKS_FILE) {
-            actor.destroy();
+            actor.child.icon.update();
         }
     });
-    dash._redisplay();
     let searchResults = controls._searchController._searchResults;
     searchResults._reloadRemoteProviders();
 }
@@ -228,13 +276,19 @@ function destroyObjects() {
         iconTimeoutConnect[0].disconnect(iconTimeoutConnect[2]);
         iconTimeoutConnect[0].destroy();
     });
+    connects.forEach(connect => {
+        settings.disconnect(connect);
+    });
     calendar = symbolicCalendar = clocks = symbolicClocks = null;
     hour = symbolicHour = minute = symbolicMinute = second = null;
+    settings = null;
+    connects = [];
     iconTimeoutConnects = [];
 }
 
 function enable() {
     createSurfaces();
+    loadSettings();
     originalInit = Search.ProviderInfo.prototype._init;
     originalCreate = Shell.App.prototype.create_icon_texture;
     Search.ProviderInfo.prototype._init = initProviderInfo;
