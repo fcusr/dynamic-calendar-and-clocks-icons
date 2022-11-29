@@ -98,6 +98,10 @@ function newIcon(iconSize, name, repaintFunc) {
         icon.queue_repaint();
         return true;
     });
+    if(iconSize != -1) {
+        let context = St.ThemeContext.get_for_stage(global.stage);
+        iconSize *= context.scale_factor;
+    }
     icon.requestedIconSize = iconSize;
     icon.set_size(iconSize, iconSize);
     icon.set_name('dynamic-' + name + '-icon');
@@ -268,6 +272,7 @@ function redisplayIcons() {
     });
     let searchResults = controls._searchController._searchResults;
     searchResults._reloadRemoteProviders();
+    Main.panel.statusArea['appMenu']._onIconThemeChanged();
 }
 
 function destroyObjects() {
