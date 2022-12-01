@@ -42,4 +42,10 @@ function fillPreferencesWindow(window) {
     page.add(clocksGroup);
     newRow(settings, clocksGroup, _('Dynamic Clocks Icon'), 'clocks');
     newRow(settings, clocksGroup, _('Show Seconds'), 'show-seconds');
+    const weatherGroup = new Adw.PreferencesGroup({
+        title: _('Weather'),
+    });
+    page.add(weatherGroup);
+    newRow(settings, weatherGroup, _('Dynamic Weather Icon'), 'weather');
+    newRow(settings, weatherGroup, _('Show Temperature'), 'show-temperature');
 }

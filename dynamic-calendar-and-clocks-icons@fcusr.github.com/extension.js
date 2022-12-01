@@ -1,14 +1,18 @@
 const Cairo = imports.cairo;
 const ExtensionUtils = imports.misc.extensionUtils;
+const Gio = imports.gi.Gio;
+const GLib = imports.gi.GLib;
 const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
 const Me = ExtensionUtils.getCurrentExtension();
 const Search = imports.ui.search;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
+const Weather = imports.misc.weather;
 
 const CALENDAR_FILE = 'org.gnome.Calendar.desktop';
 const CLOCKS_FILE = 'org.gnome.clocks.desktop';
+const WEATHER_FILE = 'org.gnome.Weather.desktop';
 
 let calendar, symbolicCalendar, clocks, symbolicClocks;
 let hour, symbolicHour, minute, symbolicMinute, second;
@@ -30,8 +34,19 @@ function createSurface(file) {
     return Cairo.ImageSurface.createFromPNG(path + file);
 }
 
+let weatherClient, weatherTimeout;
+
+function createWeatherClient() {
+    weatherClient = new Weather.WeatherClient();
+    weatherTimeout = Mainloop.timeout_add_seconds(30, () => {
+        weatherClient.info.update();
+        return true;
+    });
+}
+
 let settings, connects = [];
 let enableCalendar, showWeekday, showMonth, enableClocks, showSeconds;
+let enableWeather, showTemperature;
 
 function loadSettings() {
     settings = ExtensionUtils.getSettings
@@ -41,6 +56,8 @@ function loadSettings() {
     showMonth = settings.get_boolean('show-month');
     enableClocks = settings.get_boolean('clocks');
     showSeconds = settings.get_boolean('show-seconds');
+    enableWeather = settings.get_boolean('weather');
+    showTemperature = settings.get_boolean('show-temperature');
     connects.push(settings.connect('changed::calendar', () => {
         enableCalendar = settings.get_boolean('calendar');
         redisplayIcons();
@@ -58,6 +75,14 @@ function loadSettings() {
     connects.push(settings.connect('changed::show-seconds', () => {
         showSeconds = settings.get_boolean('show-seconds');
     }));
+    connects.push(settings.connect('changed::weather', () => {
+        enableWeather = settings.get_boolean('weather');
+        redisplayIcons();
+    }));
+    connects.push(settings.connect('changed::show-temperature', () => {
+        showTemperature = settings.get_boolean('show-temperature');
+        weatherClient.emit('changed');
+    }));
 }
 
 let originalInit;
@@ -71,6 +96,8 @@ function initProviderInfo(provider) {
         icon = newIcon(iconSize, 'calendar', repaintCalendar); 
     } else if(enableClocks && providerId == CLOCKS_FILE) {
         icon = newIcon(iconSize, 'clocks', repaintClocks);
+    } else if(enableWeather && providerId == WEATHER_FILE) {
+        icon = newWeatherIcon(iconSize);
     }
     if(icon != null) {
         let oldIcon = this._content.get_child_at_index(0);
@@ -86,6 +113,9 @@ function createIconTexture(iconSize) {
     }
     if(enableClocks && this.get_id() == CLOCKS_FILE) {
         return newIcon(iconSize, 'clocks', repaintClocks);
+    }
+    if(enableWeather && this.get_id() == WEATHER_FILE) {
+        return newWeatherIcon(iconSize);
     }
     return originalCreate.call(this, iconSize);
 }
@@ -108,6 +138,34 @@ function newIcon(iconSize, name, repaintFunc) {
     let connect = icon.connect('repaint', repaintFunc);
     icon.queue_repaint();
     iconTimeoutConnects.push([icon, timeout, connect]);
+    return icon;
+}
+
+let weatherTimeoutConnects = [];
+
+function newWeatherIcon(iconSize) {
+    let icon = new St.Bin({y_align: 2});
+    let connect = weatherClient.connect('changed', () => {
+        repaintWeather(icon);
+    });
+    icon.requestedIconSize = iconSize;
+    if(iconSize != -1) {
+        let context = St.ThemeContext.get_for_stage(global.stage);
+        iconSize *= context.scale_factor;
+    }
+    icon.set_size(iconSize, iconSize);
+    icon.set_name('dynamic-weather-icon');
+    icon.boxLayout = new St.BoxLayout({vertical: true});
+    icon.set_child(icon.boxLayout);
+    icon.image = new St.Icon({x_align: 2});
+    icon.boxLayout.add_child(icon.image);
+    icon.label = new St.Label({x_align: 2});
+    icon.boxLayout.add_child(icon.label);
+    let timeout = Mainloop.timeout_add(0, () => {
+        repaintWeather(icon);
+        return false;
+    });
+    weatherTimeoutConnects.push([icon, timeout, connect]);
     return icon;
 }
 
@@ -229,6 +287,66 @@ function repaintSymbolicClocks(icon) {
     context.$dispose();
 }
 
+function repaintWeather(icon) {
+    if(icon.get_theme_node().get_icon_style() == 2) {
+        repaintSymbolicWeather(icon);
+        return;
+    }
+    let forecast = getForecast();
+    let iconName = 'org.gnome.Weather', temperature = ' __°';
+    if(forecast != null) {
+        iconName = forecast.get_icon_name() + '-large';
+        let [, tempValue] = forecast.get_value_temp(1);
+        let prefix = Math.round(tempValue) >= 0 ? ' ' : '';
+        temperature = prefix + Math.round(tempValue) + '°';
+    }
+    let iconSize = icon.requestedIconSize;
+    let paddingTop = showTemperature ? 12 : 22;
+    icon.boxLayout.style =
+    'padding-top: ' + iconSize / 96 * paddingTop + 'px;' +
+    'background-image: url(' + Me.path + '/img/weather.svg);' +
+    'background-size: ' + iconSize + 'px;';
+    icon.image.set_gicon(Gio.ThemedIcon.new(iconName));
+    icon.image.set_icon_size(iconSize / 2);
+    icon.label.set_text(temperature);
+    icon.label.style =
+    'color: #f6f5f4;' +
+    'font-family: Cantarell, sans-serif;' +
+    'font-size: ' + iconSize / 96 * 15 + 'px;' +
+    'font-weight: bold;';
+    icon.label.visible = showTemperature;
+}
+
+function repaintSymbolicWeather(icon) {
+    let forecast = getForecast();
+    let iconName = 'org.gnome.Weather-symbolic';
+    if(forecast != null) {
+        iconName = forecast.get_symbolic_icon_name();
+    }
+    icon.image.set_gicon(Gio.ThemedIcon.new(iconName));
+    icon.image.set_icon_size(icon.requestedIconSize);
+    icon.label.visible = false;
+}
+
+function getForecast() {
+    if(!weatherClient.available || !weatherClient.hasLocation
+    || !weatherClient.info.is_valid()) {
+        return null;
+    }
+    let forecasts = weatherClient.info.get_forecast_list();
+    let now = GLib.DateTime.new_now_local();
+    for(let i = 0; i < forecasts.length; i++) {
+        let [valid, timestamp] = forecasts[i].get_value_update();
+        if(!valid || timestamp == 0) {
+            continue;
+        }
+        let datetime = GLib.DateTime.new_from_unix_local(timestamp);
+        if(now.difference(datetime) < 1800 * 1000 * 1000) {
+            return forecasts[i];
+        }
+    }
+}
+
 function getIconSize(icon, context) {
     let width = icon.get_width();
     let height = icon.get_height();
@@ -245,7 +363,8 @@ function redisplayIcons() {
     let appDisplay = controls._appDisplay;
     let apps = appDisplay._orderedItems.slice();
     apps.forEach(icon => {
-        if(icon._id == CALENDAR_FILE || icon._id == CLOCKS_FILE) {
+        if(icon._id == CALENDAR_FILE || icon._id == CLOCKS_FILE
+        || icon._id == WEATHER_FILE) {
             icon.icon.update();
         }
     });
@@ -253,7 +372,8 @@ function redisplayIcons() {
     folderIcons.forEach(folderIcon => {
         let appsInFolder = folderIcon.view._orderedItems.slice();
         appsInFolder.forEach(icon => {
-            if(icon._id == CALENDAR_FILE || icon._id == CLOCKS_FILE) {
+            if(icon._id == CALENDAR_FILE || icon._id == CLOCKS_FILE
+            || icon._id == WEATHER_FILE) {
                 icon.icon.update();
             }
         });
@@ -266,7 +386,8 @@ function redisplayIcons() {
     });
     children.forEach(actor => {
         let actorId = actor.child._delegate.app.get_id();
-        if(actorId == CALENDAR_FILE || actorId == CLOCKS_FILE) {
+        if(actorId == CALENDAR_FILE || actorId == CLOCKS_FILE
+        || actorId == WEATHER_FILE) {
             actor.child.icon.update();
         }
     });
@@ -281,18 +402,27 @@ function destroyObjects() {
         iconTimeoutConnect[0].disconnect(iconTimeoutConnect[2]);
         iconTimeoutConnect[0].destroy();
     });
+    weatherTimeoutConnects.forEach(weatherTimeoutConnect => {
+        Mainloop.source_remove(weatherTimeoutConnect[1]);
+        weatherClient.disconnect(weatherTimeoutConnect[2]);
+        weatherTimeoutConnect[0].destroy();
+    });
+    Mainloop.source_remove(weatherTimeout);
     connects.forEach(connect => {
         settings.disconnect(connect);
     });
     calendar = symbolicCalendar = clocks = symbolicClocks = null;
     hour = symbolicHour = minute = symbolicMinute = second = null;
+    weatherClient = weatherTimeout = null;
     settings = null;
     connects = [];
     iconTimeoutConnects = [];
+    weatherTimeoutConnects = [];
 }
 
 function enable() {
     createSurfaces();
+    createWeatherClient();
     loadSettings();
     originalInit = Search.ProviderInfo.prototype._init;
     originalCreate = Shell.App.prototype.create_icon_texture;
