@@ -1,6 +1,6 @@
-# GNOME Shell Extension - Dynamic Calendar and Clocks Icons
+# GNOME Shell Extension - Dynamic Calendar, Clocks and Weather Icons
 
-Let Calendar and Clocks icons show current date and time.
+Let Calendar, Clocks and Weather icons show current date, time and weather.
 
 [Get it on GNOME Extensions][get]
 
