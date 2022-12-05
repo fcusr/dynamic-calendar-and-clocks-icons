@@ -1,13 +1,10 @@
+const {Gio, GLib, Pango, PangoCairo, Shell, St} = imports.gi;
 const Cairo = imports.cairo;
 const ExtensionUtils = imports.misc.extensionUtils;
-const Gio = imports.gi.Gio;
-const GLib = imports.gi.GLib;
 const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
 const Me = ExtensionUtils.getCurrentExtension();
 const Search = imports.ui.search;
-const Shell = imports.gi.Shell;
-const St = imports.gi.St;
 const Weather = imports.misc.weather;
 
 const CALENDAR_FILE = 'org.gnome.Calendar.desktop';
@@ -46,7 +43,7 @@ function createWeatherClient() {
 
 let settings, connects = [];
 let enableCalendar, showWeekday, showMonth, enableClocks, showSeconds;
-let enableWeather, showTemperature;
+let enableWeather, showBackground, showTemperature;
 
 function loadSettings() {
     settings = ExtensionUtils.getSettings
@@ -57,6 +54,7 @@ function loadSettings() {
     enableClocks = settings.get_boolean('clocks');
     showSeconds = settings.get_boolean('show-seconds');
     enableWeather = settings.get_boolean('weather');
+    showBackground = settings.get_boolean('show-background');
     showTemperature = settings.get_boolean('show-temperature');
     connects.push(settings.connect('changed::calendar', () => {
         enableCalendar = settings.get_boolean('calendar');
@@ -77,6 +75,10 @@ function loadSettings() {
     }));
     connects.push(settings.connect('changed::weather', () => {
         enableWeather = settings.get_boolean('weather');
+        redisplayIcons();
+    }));
+    connects.push(settings.connect('changed::show-background', () => {
+        showBackground = settings.get_boolean('show-background');
         redisplayIcons();
     }));
     connects.push(settings.connect('changed::show-temperature', () => {
@@ -144,6 +146,9 @@ function newIcon(iconSize, name, repaintFunc) {
 let weatherTimeoutConnects = [];
 
 function newWeatherIcon(iconSize) {
+    if(!showBackground) {
+        return newWeatherIconWithoutBackground(iconSize);
+    }
     let icon = new St.Bin({y_align: 2});
     let connect = weatherClient.connect('changed', () => {
         repaintWeather(icon);
@@ -169,6 +174,20 @@ function newWeatherIcon(iconSize) {
     return icon;
 }
 
+function newWeatherIconWithoutBackground(iconSize) {
+    let icon = new St.Icon();
+    let connect = weatherClient.connect('changed', () => {
+        repaintWeatherWithoutBackground(icon);
+    });
+    icon.set_icon_size(iconSize);
+    let timeout = Mainloop.timeout_add(0, () => {
+        repaintWeatherWithoutBackground(icon);
+        return false;
+    });
+    weatherTimeoutConnects.push([icon, timeout, connect]);
+    return icon;
+}
+
 function repaintCalendar(icon) {
     if(icon.get_theme_node().get_icon_style() == 2) {
         repaintSymbolicCalendar(icon);
@@ -186,21 +205,25 @@ function repaintCalendar(icon) {
     context.paint();
     scaleFactor = 1 / scaleFactor;
     context.scale(scaleFactor, scaleFactor);
-    context.selectFontFace('sans-serif', 0, 1);
-    context.setFontSize(iconSize / 96 * 14);
     context.setSourceRGB(0.965, 0.961, 0.957);
+    let layout = PangoCairo.create_layout(context);
+    let fontFace = 'Cantarell, sans-serif bold';
+    let fontSize = iconSize / 96 * 14 + 'px';
+    let desc = ' font_desc="' + fontFace + ' ' + fontSize + '"';
     let text;
     if(showWeekday) {
         text = showMonth ? day + ' ' + month : day;
     } else {
         text = showMonth ? month : '';
     }
-    let textX = (iconSize - context.textExtents(text).width) / 2;
-    context.moveTo(textX, iconSize / 96 * 25);
-    context.showText(text);
+    layout.set_markup('<span' + desc + '>' + text + '</span>', -1);
+    let textX = (iconSize - layout.get_pixel_size()[0]) / 2;
+    let baseline = layout.get_baseline() / Pango.SCALE;
+    context.moveTo(textX, iconSize / 96 * 25 - baseline);
+    PangoCairo.show_layout(context, layout);
+    context.setSourceRGB(0.929, 0.2, 0.231);
     context.selectFontFace('Cantarell', 0, 1);
     context.setFontSize(iconSize / 96 * 28);
-    context.setSourceRGB(0.929, 0.2, 0.231);
     let dateX = (iconSize - context.textExtents(date).width) / 2;
     context.moveTo(dateX, iconSize / 96 * 68);
     context.showText(date);
@@ -218,9 +241,9 @@ function repaintSymbolicCalendar(icon) {
     context.paint();
     scaleFactor = 1 / scaleFactor;
     context.scale(scaleFactor, scaleFactor);
+    context.setSourceRGB(0.949, 0.949, 0.949);
     context.selectFontFace('Cantarell', 0, 1);
     context.setFontSize(iconSize / 2);
-    context.setSourceRGB(0.949, 0.949, 0.949);
     let dateX = (iconSize - context.textExtents(date).width) / 2;
     context.moveTo(dateX, iconSize / 16 * 12);
     context.showText(date);
@@ -293,9 +316,9 @@ function repaintWeather(icon) {
         return;
     }
     let forecast = getForecast();
-    let iconName = 'org.gnome.Weather', temperature = ' __°';
+    let iconName = 'weather-none', temperature = ' --°';
     if(forecast != null) {
-        iconName = forecast.get_icon_name() + '-large';
+        iconName = forecast.get_icon_name();
         let [, tempValue] = forecast.get_value_temp(1);
         let prefix = Math.round(tempValue) >= 0 ? ' ' : '';
         temperature = prefix + Math.round(tempValue) + '°';
@@ -306,14 +329,17 @@ function repaintWeather(icon) {
     'padding-top: ' + iconSize / 96 * paddingTop + 'px;' +
     'background-image: url(' + Me.path + '/img/weather.svg);' +
     'background-size: ' + iconSize + 'px;';
-    icon.image.set_gicon(Gio.ThemedIcon.new(iconName));
+    let imagePath = Me.path + '/img/' + iconName + '.svg';
+    let imageFile = Gio.File.new_for_path(imagePath);
+    icon.image.set_gicon(Gio.FileIcon.new(imageFile));
     icon.image.set_icon_size(iconSize / 2);
     icon.label.set_text(temperature);
+    icon.label.set_text_direction(1);
     icon.label.style =
     'color: #f6f5f4;' +
     'font-family: Cantarell, sans-serif;' +
-    'font-size: ' + iconSize / 96 * 15 + 'px;' +
-    'font-weight: bold;';
+    'font-weight: bold;' +
+    'font-size: ' + iconSize / 96 * 15 + 'px;';
     icon.label.visible = showTemperature;
 }
 
@@ -326,6 +352,30 @@ function repaintSymbolicWeather(icon) {
     icon.image.set_gicon(Gio.ThemedIcon.new(iconName));
     icon.image.set_icon_size(icon.requestedIconSize);
     icon.label.visible = false;
+}
+
+function repaintWeatherWithoutBackground(icon) {
+    if(icon.get_theme_node().get_icon_style() == 2) {
+        repaintSymbolicWeatherWithoutBackground(icon);
+        return;
+    }
+    let forecast = getForecast();
+    let iconName = 'weather-none';
+    if(forecast != null) {
+        iconName = forecast.get_icon_name();
+    }
+    let imagePath = Me.path + '/img/' + iconName + '.svg';
+    let imageFile = Gio.File.new_for_path(imagePath);
+    icon.set_gicon(Gio.FileIcon.new(imageFile));
+}
+
+function repaintSymbolicWeatherWithoutBackground(icon) {
+    let forecast = getForecast();
+    let iconName = 'org.gnome.Weather-symbolic';
+    if(forecast != null) {
+        iconName = forecast.get_symbolic_icon_name();
+    }
+    icon.set_gicon(Gio.ThemedIcon.new(iconName));
 }
 
 function getForecast() {

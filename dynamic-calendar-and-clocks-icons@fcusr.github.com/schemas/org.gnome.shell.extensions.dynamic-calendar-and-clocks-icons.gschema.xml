@@ -20,6 +20,9 @@
     <key name="weather" type="b">
       <default>true</default>
     </key>
+    <key name="show-background" type="b">
+      <default>true</default>
+    </key>
     <key name="show-temperature" type="b">
       <default>true</default>
     </key>

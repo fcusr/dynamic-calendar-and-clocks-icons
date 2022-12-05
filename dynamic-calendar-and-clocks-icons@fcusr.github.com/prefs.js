@@ -1,4 +1,4 @@
-const { Adw, Gio, Gtk } = imports.gi;
+const {Adw, Gio, Gtk} = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Gettext = imports.gettext;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -47,5 +47,16 @@ function fillPreferencesWindow(window) {
     });
     page.add(weatherGroup);
     newRow(settings, weatherGroup, _('Dynamic Weather Icon'), 'weather');
+    newRow(settings, weatherGroup, _('Show Background'), 'show-background');
     newRow(settings, weatherGroup, _('Show Temperature'), 'show-temperature');
+    settings.connect('changed::show-background', () => {
+        if(!settings.get_boolean('show-background')) {
+            settings.set_boolean('show-temperature', false);
+        }
+    });
+    settings.connect('changed::show-temperature', () => {
+        if(settings.get_boolean('show-temperature')) {
+            settings.set_boolean('show-background', true);
+        }
+    });
 }
