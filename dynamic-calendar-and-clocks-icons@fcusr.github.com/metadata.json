@@ -3,7 +3,7 @@
     "name": "Dynamic Calendar, Clocks and Weather Icons",
     "description":
     "Let Calendar, Clocks and Weather icons show current date, time and weather.",
-    "version": 5,
+    "version": 6,
     "shell-version": ["43"],
     "url": "https://github.com/fcusr/dynamic-calendar-and-clocks-icons"
 }

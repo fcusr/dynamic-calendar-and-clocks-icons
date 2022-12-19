@@ -2,6 +2,9 @@
 <schemalist>
   <schema id="org.gnome.shell.extensions.dynamic-calendar-and-clocks-icons"
   path="/org/gnome/shell/extensions/dynamic-calendar-and-clocks-icons/">
+    <key name="theme" type="s">
+      <default>''</default>
+    </key>
     <key name="calendar" type="b">
       <default>true</default>
     </key>
