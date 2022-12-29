@@ -4,6 +4,6 @@ Let Calendar, Clocks and Weather icons show current date, time and weather.
 
 [Get it on GNOME Extensions][get]
 
-![Screenshot](https://extensions.gnome.org/extension-data/screenshots/screenshot_5550_zppQN9R.png)
+![Screenshot](https://extensions.gnome.org/extension-data/screenshots/screenshot_5550_F29Y12j.png)
 
 [get]: https://extensions.gnome.org/extension/5550/dynamic-calendar-and-clocks-icons/
