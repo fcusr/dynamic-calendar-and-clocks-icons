@@ -444,7 +444,8 @@ function repaintWeather(icon) {
     'color: rgb(' + tempR + ',' + tempG + ',' + tempB + ');' +
     'font-family: ' + temperatureFont + ', sans-serif;' +
     'font-weight: ' + tempBold + ';' +
-    'font-size: ' + iconSize / 96 * temperatureSize + 'px;';
+    'font-size: ' + iconSize / 96 * temperatureSize + 'px;' +
+    'text-shadow: 0 0 transparent;';
     icon.label.visible = showTemperature;
 }
 
@@ -518,41 +519,13 @@ function getIconSize(icon, context) {
 }
 
 function redisplayIcons() {
-    let controls = Main.overview._overview._controls;
-    let appDisplay = controls._appDisplay;
-    let apps = appDisplay._orderedItems.slice();
-    apps.forEach(icon => {
-        if(icon._id == CALENDAR_FILE || icon._id == CLOCKS_FILE
-        || icon._id == WEATHER_FILE) {
-            icon.icon.update();
-        }
+    let textureCache = St.TextureCache.get_default();
+    textureCache.disconnect(textureHandler);
+    textureCache.emit('icon-theme-changed');
+    textureHandler = textureCache.connect('icon-theme-changed', () => {
+        loadTheme();
+        weatherClient.emit('changed');
     });
-    let folderIcons = appDisplay._folderIcons;
-    folderIcons.forEach(folderIcon => {
-        let appsInFolder = folderIcon.view._orderedItems.slice();
-        appsInFolder.forEach(icon => {
-            if(icon._id == CALENDAR_FILE || icon._id == CLOCKS_FILE
-            || icon._id == WEATHER_FILE) {
-                icon.icon.update();
-            }
-        });
-        folderIcon.icon.update();
-    });
-    let dash = controls.dash;
-    let children = dash._box.get_children().filter(actor => {
-        return actor.child
-        && actor.child._delegate && actor.child._delegate.app;
-    });
-    children.forEach(actor => {
-        let actorId = actor.child._delegate.app.get_id();
-        if(actorId == CALENDAR_FILE || actorId == CLOCKS_FILE
-        || actorId == WEATHER_FILE) {
-            actor.child.icon.update();
-        }
-    });
-    let searchResults = controls._searchController._searchResults;
-    searchResults._reloadRemoteProviders();
-    Main.panel.statusArea['appMenu']._onIconThemeChanged();
 }
 
 function destroyObjects() {

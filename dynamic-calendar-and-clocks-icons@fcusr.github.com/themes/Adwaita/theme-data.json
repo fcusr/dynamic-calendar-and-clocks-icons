@@ -4,7 +4,7 @@
     "dayMonthBold": true,
     "dayMonthSize": 14,
     "dayMonthPos": 25,
-    "dayMonthMaxWidth": 78,
+    "dayMonthMaxWidth": 74,
     "dateColor": [237, 51, 59],
     "dateFont": "Cantarell",
     "dateBold": true,

@@ -1,5 +1,6 @@
 .message .message-icon-bin > StDrawingArea,
-.message .message-icon-bin > StBin {
+.message .message-icon-bin > StBin,
+.message .message-icon-bin > StBin StIcon {
     width: 32px;
     height: 32px;
     -st-icon-style: symbolic;
