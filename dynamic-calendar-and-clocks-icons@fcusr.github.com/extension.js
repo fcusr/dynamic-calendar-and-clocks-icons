@@ -1,11 +1,15 @@
-const {Gio, GLib, Pango, PangoCairo, Shell, St} = imports.gi;
-const Cairo = imports.cairo;
-const ExtensionUtils = imports.misc.extensionUtils;
-const Main = imports.ui.main;
-const Mainloop = imports.mainloop;
-const Me = ExtensionUtils.getCurrentExtension();
-const Search = imports.ui.search;
-const Weather = imports.misc.weather;
+import Cairo from 'gi://cairo';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Pango from 'gi://Pango';
+import PangoCairo from 'gi://PangoCairo';
+import Shell from 'gi://Shell';
+import St from 'gi://St';
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Search from 'resource:///org/gnome/shell/ui/search.js';
+import * as Weather from 'resource:///org/gnome/shell/misc/weather.js';
+let Me;
 
 const CALENDAR_FILE = 'org.gnome.Calendar.desktop';
 const CLOCKS_FILE = 'org.gnome.clocks.desktop';
@@ -15,7 +19,7 @@ let weatherClient, weatherTimeout;
 
 function createWeatherClient() {
     weatherClient = new Weather.WeatherClient();
-    weatherTimeout = Mainloop.timeout_add_seconds(30, () => {
+    weatherTimeout = GLib.timeout_add_seconds(0, 30, () => {
         weatherClient.info.update();
         return true;
     });
@@ -26,7 +30,7 @@ let enableCalendar, showWeekday, showMonth, enableClocks, showSeconds;
 let enableWeather, showBackground, showTemperature;
 
 function loadSettings() {
-    settings = ExtensionUtils.getSettings
+    settings = Me.getSettings
     ('org.gnome.shell.extensions.dynamic-calendar-and-clocks-icons');
     loadTheme();
     enableCalendar = settings.get_boolean('calendar');
@@ -83,7 +87,7 @@ function loadTheme() {
     let theme = settings.get_string('theme');
     path = Me.path + '/themes/' + theme;
     if(!theme || !Gio.File.new_for_path(path).query_exists(null)) {
-        let interfaceSettings = ExtensionUtils.getSettings
+        let interfaceSettings = Me.getSettings
         ('org.gnome.desktop.interface');
         theme = interfaceSettings.get_string('icon-theme');
         path = Me.path + '/themes/' + theme;
@@ -162,7 +166,7 @@ let calendarClocksIcons = [];
 
 function newIcon(iconSize, name, repaintFunc) {
     let icon = new St.DrawingArea();
-    icon.timeout = Mainloop.timeout_add_seconds(1, () => {
+    icon.timeout = GLib.timeout_add_seconds(0, 1, () => {
         icon.queue_repaint();
         return true;
     });
@@ -203,7 +207,7 @@ function newWeatherIcon(iconSize) {
     icon.boxLayout.add_child(icon.image);
     icon.label = new St.Label({x_align: 2});
     icon.boxLayout.add_child(icon.label);
-    icon.timeout = Mainloop.timeout_add(0, () => {
+    icon.timeout = GLib.timeout_add(0, 0, () => {
         repaintWeather(icon);
         icon.timeout = null;
         return false;
@@ -218,7 +222,7 @@ function newWeatherIconWithoutBackground(iconSize) {
         repaintWeatherWithoutBackground(icon);
     });
     icon.set_icon_size(iconSize);
-    icon.timeout = Mainloop.timeout_add(0, () => {
+    icon.timeout = GLib.timeout_add(0, 0, () => {
         repaintWeatherWithoutBackground(icon);
         icon.timeout = null;
         return false;
@@ -228,7 +232,7 @@ function newWeatherIconWithoutBackground(iconSize) {
 }
 
 function disposeIcon(icon) {
-    Mainloop.source_remove(icon.timeout);
+    GLib.source_remove(icon.timeout);
     icon.disconnect(icon.handler);
     icon.disconnect(icon.stageViewsChangedHandler);
     icon.disconnect(icon.destroyHandler);
@@ -236,7 +240,7 @@ function disposeIcon(icon) {
 
 function disposeWeatherIcon(icon) {
     if(icon.timeout != null) {
-        Mainloop.source_remove(icon.timeout);
+        GLib.source_remove(icon.timeout);
     }
     weatherClient.disconnect(icon.handler);
     icon.disconnect(icon.stageViewsChangedHandler);
@@ -266,8 +270,14 @@ function repaintCalendar(icon) {
         return;
     }
     let now = new Date();
-    let day = now.toLocaleString('default', {weekday: 'short'});
-    let month = now.toLocaleString('default', {month: 'short'});
+    let locale = GLib.getenv('LC_TIME');
+    if(locale != null) {
+        locale = [locale.split('.')[0].replace('_', '-'), 'default'];
+    } else {
+        locale = 'default';
+    }
+    let day = now.toLocaleString(locale, {weekday: 'short'});
+    let month = now.toLocaleString(locale, {month: 'short'});
     let date = now.getDate().toString();
     let dayMonthR = themeData.dayMonthColor[0] / 255;
     let dayMonthG = themeData.dayMonthColor[1] / 255;
@@ -541,7 +551,7 @@ function destroyObjects() {
         weatherIcon.destroy();
     });
     weatherIcons = [];
-    Mainloop.source_remove(weatherTimeout);
+    GLib.source_remove(weatherTimeout);
     St.TextureCache.get_default().disconnect(textureHandler);
     handlers.forEach(handler => {
         settings.disconnect(handler);
@@ -553,19 +563,22 @@ function destroyObjects() {
     hour = symbolicHour = minute = symbolicMinute = second = null;
 }
 
-function enable() {
-    createWeatherClient();
-    loadSettings();
-    originalInit = Search.ProviderInfo.prototype._init;
-    originalCreate = Shell.App.prototype.create_icon_texture;
-    Search.ProviderInfo.prototype._init = initProviderInfo;
-    Shell.App.prototype.create_icon_texture = createIconTexture;
-    redisplayIcons();
-}
+export default class DynamicIconsExtension extends Extension {
+    enable() {
+        Me = this;
+        createWeatherClient();
+        loadSettings();
+        //originalInit = Search.ProviderInfo.prototype._init;
+        originalCreate = Shell.App.prototype.create_icon_texture;
+        //Search.ProviderInfo.prototype._init = initProviderInfo;
+        Shell.App.prototype.create_icon_texture = createIconTexture;
+        redisplayIcons();
+    }
 
-function disable() {
-    Search.ProviderInfo.prototype._init = originalInit;
-    Shell.App.prototype.create_icon_texture = originalCreate;
-    redisplayIcons();
-    destroyObjects();
+    disable() {
+        //Search.ProviderInfo.prototype._init = originalInit;
+        Shell.App.prototype.create_icon_texture = originalCreate;
+        redisplayIcons();
+        destroyObjects();
+    }
 }

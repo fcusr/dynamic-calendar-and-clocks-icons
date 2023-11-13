@@ -1,10 +1,9 @@
-const {Adw, Gio, Gtk} = imports.gi;
-const ExtensionUtils = imports.misc.extensionUtils;
-const Gettext = imports.gettext;
-const Me = ExtensionUtils.getCurrentExtension();
-
-const Domain = Gettext.domain(Me.metadata.uuid);
-const _ = Domain.gettext;
+import Adw from 'gi://Adw';
+import Gio from 'gi://Gio';
+import Gtk from 'gi://Gtk';
+import {ExtensionPreferences, gettext as _}
+from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
+let Me;
 
 function newRow(settings, group, title, key) {
     const actionRow = new Adw.ActionRow({
@@ -54,46 +53,45 @@ function newThemeRow(settings, group) {
     });
 }
 
-function init() {
-    ExtensionUtils.initTranslations(Me.metadata.uuid);
-}
-
-function fillPreferencesWindow(window) {
-    const settings = ExtensionUtils.getSettings
-    ('org.gnome.shell.extensions.dynamic-calendar-and-clocks-icons');
-    const page = new Adw.PreferencesPage();
-    window.add(page);
-    const themeGroup = new Adw.PreferencesGroup();
-    page.add(themeGroup);
-    newThemeRow(settings, themeGroup);
-    const calendarGroup = new Adw.PreferencesGroup({
-        title: _('Calendar'),
-    });
-    page.add(calendarGroup);
-    newRow(settings, calendarGroup, _('Dynamic Calendar Icon'), 'calendar');
-    newRow(settings, calendarGroup, _('Show Weekday'), 'show-weekday');
-    newRow(settings, calendarGroup, _('Show Month'), 'show-month');
-    const clocksGroup = new Adw.PreferencesGroup({
-        title: _('Clocks'),
-    });
-    page.add(clocksGroup);
-    newRow(settings, clocksGroup, _('Dynamic Clocks Icon'), 'clocks');
-    newRow(settings, clocksGroup, _('Show Seconds'), 'show-seconds');
-    const weatherGroup = new Adw.PreferencesGroup({
-        title: _('Weather'),
-    });
-    page.add(weatherGroup);
-    newRow(settings, weatherGroup, _('Dynamic Weather Icon'), 'weather');
-    newRow(settings, weatherGroup, _('Show Background'), 'show-background');
-    newRow(settings, weatherGroup, _('Show Temperature'), 'show-temperature');
-    settings.connect('changed::show-background', () => {
-        if(!settings.get_boolean('show-background')) {
-            settings.set_boolean('show-temperature', false);
-        }
-    });
-    settings.connect('changed::show-temperature', () => {
-        if(settings.get_boolean('show-temperature')) {
-            settings.set_boolean('show-background', true);
-        }
-    });
+export default class DynamicIconsPreferences extends ExtensionPreferences {
+    fillPreferencesWindow(window) {
+        Me = this;
+        const settings = Me.getSettings
+        ('org.gnome.shell.extensions.dynamic-calendar-and-clocks-icons');
+        const page = new Adw.PreferencesPage();
+        window.add(page);
+        const themeGroup = new Adw.PreferencesGroup();
+        page.add(themeGroup);
+        newThemeRow(settings, themeGroup);
+        const calendarGroup = new Adw.PreferencesGroup({
+            title: _('Calendar'),
+        });
+        page.add(calendarGroup);
+        newRow(settings, calendarGroup, _('Dynamic Calendar Icon'), 'calendar');
+        newRow(settings, calendarGroup, _('Show Week Day'), 'show-weekday');
+        newRow(settings, calendarGroup, _('Show Month'), 'show-month');
+        const clocksGroup = new Adw.PreferencesGroup({
+            title: _('Clocks'),
+        });
+        page.add(clocksGroup);
+        newRow(settings, clocksGroup, _('Dynamic Clocks Icon'), 'clocks');
+        newRow(settings, clocksGroup, _('Show Seconds'), 'show-seconds');
+        const weatherGroup = new Adw.PreferencesGroup({
+            title: _('Weather'),
+        });
+        page.add(weatherGroup);
+        newRow(settings, weatherGroup, _('Dynamic Weather Icon'), 'weather');
+        newRow(settings, weatherGroup, _('Show Background'), 'show-background');
+        newRow(settings, weatherGroup, _('Show Temperature'), 'show-temperature');
+        settings.connect('changed::show-background', () => {
+            if(!settings.get_boolean('show-background')) {
+                settings.set_boolean('show-temperature', false);
+            }
+        });
+        settings.connect('changed::show-temperature', () => {
+            if(settings.get_boolean('show-temperature')) {
+                settings.set_boolean('show-background', true);
+            }
+        });
+    }
 }
