@@ -580,5 +580,6 @@ export default class DynamicIconsExtension extends Extension {
         Shell.App.prototype.create_icon_texture = originalCreate;
         redisplayIcons();
         destroyObjects();
+        Me = null;
     }
 }
