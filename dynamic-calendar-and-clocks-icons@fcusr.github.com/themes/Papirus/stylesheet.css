@@ -1,0 +1,29 @@
+.window-picker #dynamic-calendar-icon.icon-dropshadow {
+    background-image: url('calendar-shadow-64.png');
+    background-size: 66px;
+}
+
+.window-picker #dynamic-clocks-icon.icon-dropshadow {
+    background-image: url('clocks-shadow-64.png');
+    background-size: 74px;
+}
+
+.window-picker #dynamic-weather-icon.icon-dropshadow {
+    background-image: url('weather-shadow-64.png');
+    background-size: 66px;
+}
+
+.apps-menu #dynamic-calendar-icon.icon-dropshadow {
+    background-image: url('calendar-shadow-32.png');
+    background-size: 37px;
+}
+
+.apps-menu #dynamic-clocks-icon.icon-dropshadow {
+    background-image: url('clocks-shadow-32.png');
+    background-size: 41px;
+}
+
+.apps-menu #dynamic-weather-icon.icon-dropshadow {
+    background-image: url('weather-shadow-32.png');
+    background-size: 37px;
+}

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   height="128"
+   width="128"
+   version="1.1"
+   id="svg4"
+   sodipodi:docname="weather-tornado.svg"
+   inkscape:version="1.3.2 (091e20ef0f, 2023-11-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="namedview4"
+     pagecolor="#ffffff"
+     bordercolor="#111111"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="6.2734375"
+     inkscape:cx="63.920299"
+     inkscape:cy="64"
+     inkscape:window-width="1920"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg4" />
+  <g
+     fill="none"
+     stroke-linecap="round"
+     id="g4">
+    <path
+       d="M95.52 39.625c-8.832 5.36-27.372 7.723-43.97 5.605-16.593-2.117-26.46-8.101-23.394-14.199 3.07-6.093 18.18-10.535 35.844-10.535"
+       stroke="#62a0ea"
+       stroke-width="10"
+       id="path1" />
+    <path
+       d="M 95.52,37.625 C 86.688,42.985 68.148,45.348 51.55,43.23 34.957,41.113 25.09,35.129 28.156,29.031 31.226,22.938 46.336,18.496 64,18.496"
+       stroke="#99c1f1"
+       stroke-width="2"
+       id="path2"
+       style="display:none" />
+    <g
+       stroke="#62a0ea"
+       stroke-width="10"
+       id="g3">
+      <path
+         d="M95.52 29.625c-7.36 4.465-21.676 6.938-36.27 6.266s-26.594-4.36-30.406-9.344c-3.809-4.98 1.32-10.277 13-13.418 11.68-3.137 27.605-3.504 40.355-.926M89.734 50.266c-8 2.8-19.265 4.144-30.484 3.625-11.219-.516-21.113-2.832-26.77-6.266M82.2 62.293c-14.266 2.883-32.286 2.055-43.934-2.027M89.734 70.266c-9.195 3.222-22.593 4.48-35.152 3.3M89.734 80.266C82.91 82.656 73.652 84 64 84M82.2 92.293C76.663 93.41 70.386 94 64 94M73.418 103.566a102.5 102.5 0 0 1-18.836 0M73.418 113.566A100.9 100.9 0 0 1 64 114M65.117 123.992c-.37.004-.746.008-1.117.008"
+         id="path3" />
+    </g>
+    <path
+       d="m 95.52,27.625 c -7.36,4.465 -21.676,6.938 -36.27,6.266 -14.594,-0.672 -26.594,-4.36 -30.406,-9.344 -3.809,-4.98 1.32,-10.277 13,-13.418 11.68,-3.137 27.605,-3.504 40.355,-0.926 m 7.535,38.063 c -8,2.8 -19.265,4.144 -30.484,3.625 C 48.031,51.375 38.137,49.059 32.48,45.625 M 82.2,60.293 C 67.934,63.176 49.914,62.348 38.266,58.266 m 51.468,10 c -9.195,3.222 -22.593,4.48 -35.152,3.3 m 35.152,6.7 C 82.91,80.656 73.652,82 64,82 m 18.2,8.293 C 76.663,91.41 70.386,92 64,92 m 9.418,9.566 a 102.5,102.5 0 0 1 -18.836,0 m 18.836,10 A 100.9,100.9 0 0 1 64,112 m 1.117,9.992 C 64.747,121.996 64.371,122 64,122"
+       stroke="#99c1f1"
+       stroke-width="2"
+       id="path4"
+       style="display:none" />
+  </g>
+</svg>
