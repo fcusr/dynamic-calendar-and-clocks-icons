@@ -201,7 +201,7 @@ function newWeatherIcon(iconSize) {
     }
     icon.set_size(iconSize, iconSize);
     icon.set_name('dynamic-weather-icon');
-    icon.boxLayout = new St.BoxLayout({vertical: true});
+    icon.boxLayout = new St.BoxLayout({vertical: true, y_expand: true});
     icon.set_child(icon.boxLayout);
     icon.image = new St.Icon({x_align: 2});
     icon.boxLayout.add_child(icon.image);
@@ -529,6 +529,38 @@ function getIconSize(icon, context) {
 }
 
 function redisplayIcons() {
+    let controls = Main.overview._overview._controls;
+    let appDisplay = controls._appDisplay;
+    let apps = appDisplay._orderedItems.slice();
+    apps.forEach(icon => {
+        if(icon._id == CALENDAR_FILE || icon._id == CLOCKS_FILE
+        || icon._id == WEATHER_FILE) {
+            icon.icon.update();
+        }
+    });
+    let folderIcons = appDisplay._folderIcons;
+    folderIcons.forEach(folderIcon => {
+        let appsInFolder = folderIcon.view._orderedItems.slice();
+        appsInFolder.forEach(icon => {
+            if(icon._id == CALENDAR_FILE || icon._id == CLOCKS_FILE
+            || icon._id == WEATHER_FILE) {
+                icon.icon.update();
+            }
+        });
+        folderIcon.icon.update();
+    });
+    let dash = controls.dash;
+    let children = dash._box.get_children().filter(actor => {
+        return actor.child
+        && actor.child._delegate && actor.child._delegate.app;
+    });
+    children.forEach(actor => {
+        let actorId = actor.child._delegate.app.get_id();
+        if(actorId == CALENDAR_FILE || actorId == CLOCKS_FILE
+        || actorId == WEATHER_FILE) {
+            actor.child.icon.update();
+        }
+    });
     let textureCache = St.TextureCache.get_default();
     textureCache.disconnect(textureHandler);
     textureCache.emit('icon-theme-changed');
